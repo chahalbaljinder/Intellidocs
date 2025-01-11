@@ -66,7 +66,7 @@ print(f"Splited {len(collection)} documents into chunks")
 # Function to generate embeddings using gemini api
 def get_gemini_embedding(text):
     response = gemini_ef(text)
-    embedding = response.data[0].embedding
+    embedding = response[0]
     print("==== Generating embeddings... ====")
     return embedding
 
@@ -74,4 +74,58 @@ def get_gemini_embedding(text):
 for doc in chunked_documents:
     print("==== Generating embeddings... ====")
     doc["embedding"] = get_gemini_embedding(doc["text"])
-    print(doc["embedding"])
+#print(doc["embedding"])
+
+#upsert documents with embeddings to chromadb
+print("==== Inserting chunks into db ====")
+for doc in chunked_documents:
+    collection.upsert(
+        ids=[doc["id"]], documents=[doc["text"]], embeddings=[doc["embedding"]]
+    )
+
+# Function to query documents
+def query_documents(question, top_k=5):
+    print("==== Querying documents ====")
+    #query_embedding = get_gemini_embedding(question)
+    results = collection.query(query_text=question, top_k=top_k)
+
+    # Extract the relevant chunks
+    relevant_chunks = [doc for sublist in results["documents"] for doc in sublist]
+    print("==== Returning relevant chunks ====")
+    return relevant_chunks
+
+# Function to generate a response from Gemini
+def generate_response(question, relevant_chunks):
+    context = "\n\n".join(relevant_chunks)
+    prompt = (
+        "You are an assistant for question-answering tasks. Use the following pieces of "
+        "retrieved context to answer the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the answer concise."
+        "\n\nContext:\n" + context + "\n\nQuestion:\n" + question
+    )
+    response = genai.generate_content(
+        model="gemini-1.5-flash",
+        messages=[
+            {
+                "role": "system",
+                "content": prompt,
+            },
+            {
+                "role": "user",
+                "content": question,
+            },
+        ],
+    )
+
+    answer = response.choices[0].message
+    return answer
+
+
+# Example query
+# query_documents("tell me about AI replacing TV writers strike.")
+# Example query and response generation
+question = "tell me about databricks"
+relevant_chunks = query_documents(question)
+answer = generate_response(question, relevant_chunks)
+
+print(answer)
