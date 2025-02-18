@@ -1,0 +1,6 @@
+python-dotenv
+chromadb
+google-generativeai
+numpy
+streamlit
+aiofiles
