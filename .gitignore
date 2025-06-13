@@ -1,1 +1,13 @@
 .env
+
+# Data directories
+chroma_persistence.storage/
+crawled_data/
+crawled_images/
+news_articles/
+user_images/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
